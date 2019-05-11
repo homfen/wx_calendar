@@ -1,6 +1,5 @@
 import {
   warn,
-  tips,
   newDate,
   getCurrentPage,
   uniqueArrayByDate,
@@ -11,7 +10,7 @@ import {
 
 let currentPage = {};
 
-function getData(key) {
+export function getData(key) {
   if (!key) return currentPage.data;
   if (key.includes('.')) {
     let keys = key.split('.');
@@ -46,7 +45,7 @@ function getCalendarConfig() {
   return currentPage.config;
 }
 
-function setCalendarConfig(key, value) {
+export function setCalendarConfig(key, value) {
   currentPage.config[key] = value;
 }
 
@@ -1173,42 +1172,33 @@ export function enableDays(days = []) {
   });
 }
 
-export function setSelectedDays(selected) {
+export function setSelectedDays(selected = []) {
   const config = getCalendarConfig();
   if (!config.multi) {
     return warn('单选模式下不能设置多日期选中，请配置 multi');
   }
-  const { selectedDay, days } = getData('calendar');
+  const days = getData('calendar.days');
+  days.map(item => {
+    item.choosed = false;
+    item.showTodoLabel = false;
+  });
   let newSelectedDay = [];
-  if (!selected) {
-    days.map(item => {
-      item.choosed = true;
-      item.showTodoLabel = false;
-    });
+  if (!selected.length) {
     newSelectedDay = days;
-  } else if (selected && selected.length) {
-    if (selectedDay && selectedDay.length) {
-      newSelectedDay = uniqueArrayByDate(selectedDay.concat(selected));
-    } else {
-      newSelectedDay = selected;
-    }
+  } else {
+    newSelectedDay = selected;
     const { year: curYear, month: curMonth } = days[0];
     const currentSelectedDays = [];
-    newSelectedDay.forEach(item => {
-      if (+item.year === +curYear && +item.month === +curMonth) {
-        currentSelectedDays.push(`${item.year}-${item.month}-${item.day}`);
+    newSelectedDay.forEach(({year, month, day}) => {
+      if (+year === +curYear && +month === +curMonth) {
+        currentSelectedDays.push(`${year}-${month}-${day}`);
       }
     });
     days.map(item => {
-      if (
-        currentSelectedDays.includes(`${item.year}-${item.month}-${item.day}`)
-      ) {
-        item.choosed = true;
-        item.showTodoLabel = false;
-      }
+      const {year, month, day} = item;
+      item.choosed = currentSelectedDays.includes(`${year}-${month}-${day}`);
     });
   }
-  setCalendarConfig('multi', true);
   setData({
     'calendar.days': days,
     'calendar.selectedDay': newSelectedDay
@@ -1235,9 +1225,6 @@ function mountEventsOnPage(page) {
 }
 
 export default (config = {}) => {
-  tips(
-    '使用中若遇问题请反馈至 https://github.com/treadpit/wx_calendar/issues ✍️'
-  );
   const weeksCh = ['日', '一', '二', '三', '四', '五', '六'];
   currentPage = getCurrentPage();
   currentPage.config = config;
